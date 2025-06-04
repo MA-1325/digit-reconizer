@@ -74,24 +74,42 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num
 # -----------------------------
 # 4. 模型定义
 # -----------------------------
-class SimpleCNN(nn.Module):
+class ImprovedCNN(nn.Module):
     def __init__(self):
-        super(SimpleCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.pool2 = nn.MaxPool2d(2, 2)
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(128, 10)
+        super(ImprovedCNN, self).__init__()
+        self.features = nn.Sequential(
+            # Block 1
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),     # (1, 28, 28) -> (32, 28, 28)
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),    # -> (32, 28, 28)
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),          # -> (32, 14, 14)
+
+            # Block 2
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),    # -> (64, 14, 14)
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),    # -> (64, 14, 14)
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),          # -> (64, 7, 7)
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Linear(64 * 7 * 7, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 10)
+        )
 
     def forward(self, x):
-        x = self.pool1(torch.relu(self.conv1(x)))
-        x = self.pool2(torch.relu(self.conv2(x)))
-        x = self.flatten(x)
-        x = self.dropout(torch.relu(self.fc1(x)))
-        return self.fc2(x)
+        x = self.features(x)
+        x = x.view(x.size(0), -1)  # Flatten
+        x = self.classifier(x)
+        return x
+
 
 # -----------------------------
 # 5. 训练设置   
@@ -104,7 +122,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    model = SimpleCNN().to(device)
+    model = ImprovedCNN().to(device)
     print(model)
 
     criterion = nn.CrossEntropyLoss()
