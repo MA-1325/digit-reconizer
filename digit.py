@@ -7,10 +7,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-
-# -----------------------------
-# 1. Dataset 类定义
-# -----------------------------
 class DigitDataset(Dataset):
     def __init__(self, data_df, is_train=True, transform=None):
         self.is_train = is_train
